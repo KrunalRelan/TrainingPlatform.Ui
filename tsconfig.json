@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "baseUrl": "./",
+    "target": "ESNext", // Set to your desired ECMAScript version
+    "module": "ESNext",
+ "composite": true,
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "allowJs": true, // Allow JavaScript files in the project
+    "skipLibCheck": true, // Skips type checking for libraries
+    "strict": true, // Enable all strict type checking options
+    "forceConsistentCasingInFileNames": true, // Enforces consistent casing for imports
+    "moduleResolution": "Node",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx", // Set to "react" if using older React
+    "typeRoots": ["./node_modules/@types"], // Ensures TypeScript can find your types
+    "noImplicitAny": false, // Optional: Disable errors for missing type annotations
+    "paths": {
+      "@mui/*": ["node_modules/@mui/*"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]  
+}

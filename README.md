@@ -1,1 +1,2 @@
-# TrainingPlatform.Ui
+# TrainingPlatform-Ui
+ 
