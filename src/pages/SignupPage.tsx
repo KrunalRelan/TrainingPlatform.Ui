@@ -10,31 +10,58 @@ import {
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "@mui/material/styles";
-import { submitRegistration } from "../api/RegistrationService";
 import { useFormik } from "formik";
-import {
-  trainerValidationSchema,
-  companyValidationSchema,
-  hotelValidationSchema,
-} from "../validations/registrationValidation";
+import * as Yup from "yup";
 
-type FormData = {
-  [key: string]: string;
-};
+const trainerValidationSchema = Yup.object().shape({
+  name: Yup.string().required("Name is required"),
+  email: Yup.string().email("Invalid email").required("Email is required"),
+  location: Yup.string().required("Location is required"),
+  experience: Yup.string().required("Experience is required"),
+  specialization: Yup.string().required("Specialization is required"),
+  pricePerClass: Yup.number()
+    .typeError("Price must be a number")
+    .required("Price Per Class is required"),
+});
+
+const companyValidationSchema = Yup.object().shape({
+  enquirerName: Yup.string().required("Enquirer Name is required"),
+  email: Yup.string().email("Invalid email").required("Email is required"),
+  location: Yup.string().required("Location is required"),
+  areaOfTraining: Yup.string().required("Area of Training is required"),
+  pricePerSession: Yup.number()
+    .typeError("Price must be a number")
+    .required("Price Per Session is required"),
+  maxPax: Yup.number()
+    .typeError("Max Pax must be a number")
+    .required("Max Pax is required"),
+});
+
+const hotelValidationSchema = Yup.object().shape({
+  name: Yup.string().required("Hotel Name is required"),
+  email: Yup.string().email("Invalid email").required("Email is required"),
+  location: Yup.string().required("Location is required"),
+  maxPax: Yup.number()
+    .typeError("Max Pax must be a number")
+    .required("Max Pax is required"),
+  totalRooms: Yup.number()
+    .typeError("Total Rooms must be a number")
+    .required("Total Rooms is required"),
+  facilities: Yup.string().required("Facilities are required"),
+});
 
 export default function SignupPage() {
   const [module, setModule] = useState("trainer");
   const [currentStep, setCurrentStep] = useState(0);
-  const [formData, setFormData] = useState<FormData>({}); // Typed formData
   const navigate = useNavigate();
   const theme = useTheme();
 
   const validationSchema =
-  module === "trainer"
-    ? trainerValidationSchema
-    : module === "company"
-    ? companyValidationSchema
-    : hotelValidationSchema;
+    module === "trainer"
+      ? trainerValidationSchema
+      : module === "company"
+      ? companyValidationSchema
+      : hotelValidationSchema;
 
   const formik = useFormik({
     initialValues: {
@@ -50,60 +77,62 @@ export default function SignupPage() {
       maxPax: "",
       totalRooms: "",
       facilities: "",
-      password: "",
-      updates: false,
     },
-    validationSchema, // Attach the schema here
+    validationSchema,
     onSubmit: (values) => {
       console.log("Form Data:", values);
       alert(`Registration successful for ${module}!`);
-      navigate("/dashboard"); // Redirect to dashboard after successful submission
+      navigate("/dashboard");
     },
   });
-  const fieldData: { [key: string]: { [key: number]: string[] } } = {
+
+  const fieldData = {
     trainer: {
-      0: ["Name", "Email"],
-      1: ["Location", "Experience"],
-      2: ["Specialization", "Price Per Class"],
+      0: ["name", "email"],
+      1: ["location", "experience"],
+      2: ["specialization", "pricePerClass"],
     },
     company: {
-      0: ["Company Name", "Enquirer Name"],
-      1: ["Location", "Area of Training"],
-      2: ["Price Per Session", "Number of People"],
+      0: ["enquirerName", "email"],
+      1: ["location", "areaOfTraining"],
+      2: ["pricePerSession", "maxPax"],
     },
     hotel: {
-      0: ["Hotel Name", "Email"],
-      1: ["Location", "Max Pax"],
-      2: ["Total Rooms", "Facilities"],
+      0: ["name", "email"],
+      1: ["location", "maxPax"],
+      2: ["totalRooms", "facilities"],
     },
   };
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: string) => {
-    setModule(newValue);
-    formik.resetForm(); // Reset form data when switching modules
-  };
-  const currentFields = fieldData[module][currentStep];
+  const handleNext = () => {
+    const currentStepFields = fieldData[module][currentStep];
+    const errors = currentStepFields.reduce((acc, field) => {
+      if (formik.errors[field]) {
+        acc[field] = formik.errors[field];
+      }
+      return acc;
+    }, {});
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
+    if (Object.keys(errors).length > 0) {
+      console.log("Step Errors:", errors);
+      alert("Please fix the validation errors before proceeding.");
+      return;
+    }
 
-  const handleNext = async () => {
     if (currentStep < Object.keys(fieldData[module]).length - 1) {
-      // handleInputChange(module,formData);
       setCurrentStep(currentStep + 1);
     } else {
-      await submitRegistration(module, formData);
-      alert(`Registration completed for ${module}`);
-      navigate("/dashboard");
+      formik.handleSubmit();
     }
   };
 
   const handleModuleChange = (e: React.SyntheticEvent, newValue: string) => {
     setModule(newValue);
     setCurrentStep(0);
-    setFormData({});
+    formik.resetForm();
   };
+
+  const currentFields = fieldData[module][currentStep];
 
   return (
     <Grid container sx={{ height: "100vh", backgroundColor: theme.palette.background.default }}>
@@ -125,11 +154,6 @@ export default function SignupPage() {
           {module === "trainer" && "Trainer Registration"}
           {module === "company" && "Company Registration"}
           {module === "hotel" && "Hotel Registration"}
-        </Typography>
-        <Typography variant="subtitle1">
-          {currentStep === 0 && "Enter your basic information."}
-          {currentStep === 1 && "Provide additional details."}
-          {currentStep === 2 && "Finalize your registration."}
         </Typography>
       </Grid>
 
@@ -170,25 +194,16 @@ export default function SignupPage() {
           {currentFields.map((field, index) => (
             <TextField
               key={index}
-              label={field}
+              name={field}
+              label={field.charAt(0).toUpperCase() + field.slice(1).replace(/([A-Z])/g, " $1")}
               variant="outlined"
               fullWidth
               margin="normal"
-              value={formData[field] || ""}
-              onChange={(e) => handleInputChange(field, e.target.value)}
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  "& fieldset": {
-                    borderColor: theme.palette.divider,
-                  },
-                  "&:hover fieldset": {
-                    borderColor: theme.palette.primary.main,
-                  },
-                  "&.Mui-focused fieldset": {
-                    borderColor: theme.palette.primary.main,
-                  },
-                },
-              }}
+              value={formik.values[field]}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={formik.touched[field] && Boolean(formik.errors[field])}
+              helperText={formik.touched[field] && formik.errors[field]}
             />
           ))}
 
